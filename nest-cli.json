@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "plugins": ["@nestjs/swagger"],
+    "assets": [
+      "modules/emails/templates/**/*",
+      {
+        "_comment": "config cho phép chúng ta định nghĩa thêm các thư mục cần copy vào thư mục dist khi chúng ta build project.",
+        "include": "common/i18n/**/*",
+        "watchAssets": true
+      }
+    ]
+  }
+}
