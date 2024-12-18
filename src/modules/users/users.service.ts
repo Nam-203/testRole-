@@ -4,6 +4,7 @@ import { In, Repository } from 'typeorm';
 
 import { TLanguage } from '@/common/types/index.e';
 
+import { Permission } from '../permission/entities/permission.entity';
 import { Role } from '../roles/entities/role.entity';
 import { RolesService } from '../roles/roles.service';
 
@@ -17,6 +18,8 @@ export class UsersService {
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
     @InjectRepository(Role) private readonly rolesRepository: Repository<Role>,
     @InjectRepository(UserRole) private readonly userRolesRepository: Repository<UserRole>,
+    @InjectRepository(Permission) private readonly permissionsRepository: Repository<Permission>,
+
     private readonly rolesService: RolesService
   ) {}
 
@@ -65,6 +68,7 @@ export class UsersService {
     console.log('user', user);
     console.log('User ID:', user?.id);
     console.log('User Full Name:', user?.fullName);
+    const roles = user.userRoles.map((userRole) => userRole.role?.name);
 
     if (user?.userRoles && user.userRoles.length > 0) {
       user.userRoles.forEach((userRole) => {
@@ -72,7 +76,11 @@ export class UsersService {
         console.log('Role Name:', userRole.role?.name);
       });
     }
-    return user;
+    const userWithRoles = {
+      ...user,
+      roles: roles
+    } as unknown as User;
+    return userWithRoles as User;
   }
 
   /**
@@ -130,5 +138,42 @@ export class UsersService {
     const user = await this.findUserById(id);
     user.password = newPassword;
     return this.usersRepository.save(user);
+  }
+
+  /**
+   * Kiểm tra quyền của người dùng
+   * @param userId - ID của người dùng
+   * @param permission - Quyền cần kiểm tra
+   * @returns true nếu người dùng có quyền, false nếu không
+   */
+  // async hasPermission(userId: string, permissionKey: string): Promise<boolean> {
+  //   const user = await this.usersRepository.findOne({
+  //     where: { id: userId },
+  //     relations: ['userRoles', 'userRoles.role', 'userRoles.role.permissions']
+  //   });
+
+  //   if (!user) {
+  //     throw new NotFoundException('User not found');
+  //   }
+
+  //   return user.userRoles.some((userRole) => userRole.role.permissions.some((p) => p.key === permissionKey));
+  // }
+  async hasPermission(userId: string, permissionKey: string): Promise<boolean> {
+    const result = await this.usersRepository
+      .createQueryBuilder('user')
+      .innerJoinAndSelect('user.userRoles', 'userRole') // Join với userRoles
+      .innerJoinAndSelect('userRole.role', 'role') // Join với role
+      .innerJoinAndSelect('role.permissions', 'permission') // Join với permissions
+      .where('user.id = :userId', { userId }) // Lọc theo userId
+      .andWhere('permission.key = :permissionKey', { permissionKey }) // Kiểm tra quyền
+      .getOne(); // Lấy một kết quả duy nhất
+
+    // Nếu không tìm thấy người dùng hoặc quyền, ném lỗi
+    if (!result) {
+      throw new NotFoundException('User or Permission not found');
+    }
+
+    // Trả về true nếu có quyền, ngược lại false
+    return true;
   }
 }
