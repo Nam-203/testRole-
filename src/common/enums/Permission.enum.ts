@@ -1,7 +1,8 @@
-// permission.enum.ts
+// src/modules/permission/permission.enum.ts
+
 export enum Permission {
-  CREATE = 'CREATE',
   READ = 'READ',
+  CREATE = 'CREATE',
   UPDATE = 'UPDATE',
   DELETE = 'DELETE'
 }

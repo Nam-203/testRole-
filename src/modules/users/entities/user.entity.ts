@@ -1,12 +1,12 @@
 import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
-import { Column, Entity, OneToMany, Unique } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany, OneToMany, Unique } from 'typeorm';
 
 import { RefreshToken } from '@/modules/auth/entities/refresh-token.entity';
+import { Permission } from '@/modules/permission/entities/permission.entity';
+import { Role } from '@/modules/roles/entities/role.entity';
 
 import { AbstractEntityWithUUID } from '../../../common/abstracts/entity.abstract';
-
-import { UserRole } from './userRole.entity';
 
 @Entity({ name: 'users' })
 @Unique(['email'])
@@ -37,18 +37,22 @@ export class User extends AbstractEntityWithUUID {
   address: string;
 
   @ApiProperty({ description: 'Avatar of user', example: 'https://example.com/avatar.jpg' })
-  @Column({
-    nullable: true
-  })
+  @Column({ nullable: true })
   avatar: string;
 
   @ApiProperty({ description: 'Status of user', example: 1 })
   @Column()
   status: number;
 
-  @OneToMany(() => UserRole, (userRole) => userRole.user, { onDelete: 'CASCADE' })
-  userRoles: UserRole[];
-
+  @ManyToMany(() => Role, (role) => role.users, {
+    cascade: true
+  })
+  @JoinTable({
+    name: 'user_roles',
+    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' }
+  })
+  roles: Role[];
   @ApiHideProperty()
   @OneToMany(() => RefreshToken, (refreshToken) => refreshToken.user)
   refreshTokens!: RefreshToken[];

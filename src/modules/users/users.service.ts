@@ -2,19 +2,22 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
-import { Role } from '../roles/entities/role.entity';
+import { Permission as PermissionEnum } from '@/common/enums/Permission.enum';
+
+import { Permission } from '../permission/entities/permission.entity';
+import { PermissionService } from '../permission/permission.service';
 import { RolesService } from '../roles/roles.service';
 
 import { RegisterUserRequestDto } from './dto/user-request.dto';
 import { User } from './entities/user.entity';
-import { UserRole } from './entities/userRole.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
-    @InjectRepository(UserRole) private readonly userRolesRepository: Repository<UserRole>,
-    private readonly rolesService: RolesService
+    @InjectRepository(Permission) private readonly permissionRepository: Repository<Permission>,
+    private readonly rolesService: RolesService,
+    private readonly permissionService: PermissionService
   ) {}
 
   /**
@@ -26,16 +29,21 @@ export class UsersService {
   //! cần update lại để không phụ thuộc các service với nhau
   async createNewUser(createUserRequestDto: RegisterUserRequestDto): Promise<User> {
     const newUser = this.usersRepository.create(createUserRequestDto);
+
     const savedUser = await this.usersRepository.save(newUser);
 
-    const addRole = await this.rolesService.createNewRole({ name: 'User', isSuperAdmin: false });
-    const userRole = this.userRolesRepository.create({
-      user: savedUser,
-      role: addRole
-    });
-    await this.userRolesRepository.save(userRole);
+    const addRole = await this.rolesService.createDefaultRole();
+    savedUser.roles = [addRole];
 
-    return newUser;
+    await this.usersRepository.save(savedUser);
+
+    const readPermission = await this.permissionService.createPermission(PermissionEnum.READ);
+
+    savedUser.roles[0].permissions = [readPermission];
+
+    await this.usersRepository.save(savedUser);
+
+    return savedUser;
   }
 
   /**
@@ -43,33 +51,21 @@ export class UsersService {
    * @param email - Email của người dùng
    * @returns Người dùng tìm thấy
    */
-  // async addPermissionToUser(user: User, permission: Permission) {
-  //   // Kiểm tra xem quyền có hợp lệ hay không
-  //   const userPermissions = RolePermissions[user.role] || [];
 
-  //   if (!userPermissions.includes(permission)) {
-  //     userPermissions.push(permission); // Thêm quyền mới
-  //   }
-
-  //   // Cập nhật quyền của người dùng trong cơ sở dữ liệu
-  //   user.permissions = userPermissions;
-  // }
   async findUserByEmail(email: string): Promise<User> {
     return this.usersRepository.findOne({ where: { email } });
   }
   async findUserLogin(email: string): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { email },
-      relations: ['userRoles', 'userRoles.user', 'userRoles.role']
+      relations: ['roles', 'permissions']
     });
 
-    const roles = user.userRoles.map((userRole) => userRole.role?.name);
+    if (!user) {
+      throw new Error('User not found');
+    }
 
-    const userWithRoles = {
-      ...user,
-      roles: roles
-    } as unknown as User;
-    return userWithRoles as User;
+    return user;
   }
 
   /**
@@ -101,7 +97,7 @@ export class UsersService {
 
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: [...relations, 'userRoles', 'userRoles.role']
+      relations: [...relations, 'roles', 'roles.permissions']
     });
 
     if (!user) {
@@ -109,7 +105,7 @@ export class UsersService {
     }
 
     // Extract role names
-    const roles = user.userRoles.map((userRole) => userRole.role.name);
+    const roles = user.roles.map((userRole) => userRole.name);
 
     // Create a new object with user properties and roles
     const userWithRoles = {
@@ -172,5 +168,8 @@ export class UsersService {
 
     // Trả về true nếu có quyền, ngược lại false
     return true;
+  }
+  async findOne(options: { where: { id: string }; relations: string[] }): Promise<User | undefined> {
+    return this.usersRepository.findOne(options);
   }
 }

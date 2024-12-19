@@ -15,6 +15,8 @@ export class JwtGuard extends AuthGuard('jwt') implements IAuthGuard {
     // console.log('user', user);
     const request = context.switchToHttp().getRequest();
     request['user_data'] = user;
+
+    console.log('request', request['user_data']);
     // console.log('request', request['user_data']);
     return user;
   }

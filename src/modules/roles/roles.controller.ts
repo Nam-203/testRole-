@@ -1,9 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation } from '@nestjs/swagger';
 import { ApiResponse } from '@nestjs/swagger';
+import console from 'console';
 
 import { Roles } from '@/common/decorators/custumsize';
-import { Role as RoleEnum } from '@/common/enums/role.enum';
+import { RoleEnum } from '@/common/enums/role.enum';
 
 import { RolesGuard } from '../auth/guards/role.guard';
 
@@ -22,19 +23,20 @@ export class RolesController {
   @ApiResponse({ status: 200, description: 'Cập nhật vai trò thành công', type: Role })
   async updateRole(
     @Req() req,
-    @Param('roleId') roleId: string,
+    @Param('userId') userId: string,
     @Body()
     body: {
       name?: string;
     }
   ): Promise<Role> {
     const IdAdmin = req['user_data'].id;
-    return this.rolesService.updateRole(IdAdmin, roleId, body);
+    console.log('IdAdmin', IdAdmin);
+    return this.rolesService.updateRole(IdAdmin, userId, body);
   }
-  @Post()
-  create(@Body() createRoleDto: CreateRoleDto) {
-    return this.rolesService.createNewRole(createRoleDto);
-  }
+  // @Post()
+  // create(@Body() createRoleDto: CreateRoleDto) {
+  //   return this.rolesService.createNewRole(createRoleDto);
+  // }
 
   @Get()
   findAll() {

@@ -12,8 +12,9 @@ export const dataSourceOptions = {
   username: process.env.MYSQL_ROOT_USER,
   password: process.env.MYSQL_ROOT_PASSWORD,
   database: process.env.MYSQL_DATABASE,
-  synchronize: !!process.env.MYSQL_SYNCHRONIZE,
+  synchronize: !!process.env.MYSQL_SYNCHRONIZE, // do not set it true in production application
   dropSchema: false,
+  // entities: [Skill, Company, Resource, Permission, Role, User, TimeEntry, Token],
   entities: ['dist/modules/**/*.entity{.ts,.js}'],
   migrations: ['dist/modules/database/migrations/*{.ts,.js}', 'src/database/seeds/*.sql'],
   timezone: 'Z'

@@ -1,5 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
 
+import { Role } from '@/modules/roles/entities/role.entity';
 import { User } from '@/modules/users/entities/user.entity';
 3;
 
