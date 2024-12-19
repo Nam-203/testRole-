@@ -44,11 +44,7 @@ export class RolesService {
   }
 
   async updateRole(IdAdmin: string, userId: string, updateData: UpdateRoleDto): Promise<Role> {
-    console.log('IdAdmin', IdAdmin);
-    console.log('userId', userId);
-
     const isAdmin = await this.isAdmin(IdAdmin);
-    console.log('isAdmin', isAdmin);
     if (!isAdmin) {
       throw new UnauthorizedException('Chỉ Admin mới được cập nhật vai trò');
     }
@@ -58,21 +54,20 @@ export class RolesService {
       throw new BadRequestException('Vai trò mới không hợp lệ. Chỉ có thể là Editor hoặc Admin.');
     }
 
-    // const user = await this.usersService.findOne({ where: { id: userId }, relations: ['roles'] });
-    // if (!user) {
-    //   throw new NotFoundException('Người dùng không tồn tại');
-    // }
+    const user = await this.usersRepository.findOne({ where: { id: userId }, relations: ['roles'] });
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
 
-    // Tìm vai trò mới cần cập nhật
     const newRole = await this.rolesRepository.findOne({ where: { name: updateData.name as RoleEnum } });
     if (!newRole) {
       throw new NotFoundException('Vai trò không tồn tại');
     }
 
-    // user.roles = [newRole]; // Ensure newRole is a valid Role object
-    // await this.usersRepository.save(user);
+    user.roles = [newRole];
+    await this.usersRepository.save(user);
 
-    return; // Return the upda
+    return newRole;
   }
 
   async remove(IdAdmin: string, id: string) {
