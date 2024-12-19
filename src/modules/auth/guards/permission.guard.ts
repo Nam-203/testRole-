@@ -20,9 +20,9 @@ export class PermissionGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const userId = request.user.id; // Assuming user ID is stored in request user after login
+    const userId = request['user_data'];
+    console.log('userId', userId);
 
-    // Check user's permissions
     for (const permission of requiredPermissions) {
       const hasPermission = await this.userService.hasPermission(userId, permission);
       if (!hasPermission) {

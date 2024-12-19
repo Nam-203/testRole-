@@ -1,17 +1,8 @@
-import {
-  BadRequestException,
-  Body,
-  Injectable,
-  NotFoundException,
-  Param,
-  Put,
-  Req,
-  UnauthorizedException
-} from '@nestjs/common';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { from } from 'rxjs';
 import { Repository } from 'typeorm';
+
+import { Role as RoleEnum } from '@/common/enums/role.enum';
 
 import { User } from '../users/entities/user.entity';
 
@@ -24,82 +15,74 @@ export class RolesService {
   constructor(@InjectRepository(Role) private readonly rolesRepository: Repository<Role>) {}
 
   async createNewRole(createRoleDto: CreateRoleDto): Promise<Role> {
-    const { name, isSuperAdmin } = createRoleDto;
-
     const newRole = this.rolesRepository.create({
-      name,
-      isSuperAdmin
+      name: RoleEnum.USER,
+      isSuperAdmin: createRoleDto.isSuperAdmin
     });
 
     return this.rolesRepository.save(newRole);
   }
 
   async createDefaultRole(): Promise<void> {
-    const defaultRole = await this.rolesRepository.findOne({ where: { name: 'User' } });
+    const defaultRole = await this.rolesRepository.findOne({ where: { name: RoleEnum.USER } });
     if (!defaultRole) {
-      const newRole = this.rolesRepository.create({ name: 'User', isSuperAdmin: false });
+      const newRole = this.rolesRepository.create({ name: RoleEnum.USER, isSuperAdmin: false });
       await this.rolesRepository.save(newRole);
     }
   }
 
   findAll() {
-    return `This action returns all roles`;
+    return this.rolesRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} role`;
+  findOne(id: string) {
+    return this.rolesRepository.findOne({ where: { id: id } });
   }
   async isAdmin(userId: string): Promise<boolean> {
     const user = await this.rolesRepository.manager.findOne(User, {
       where: { id: userId },
       relations: ['userRoles', 'userRoles.role']
     });
-
-    return user?.userRoles.some((userRole) => userRole.role.name === 'ADMIN') || false;
+    return user?.userRoles.some((userRole) => userRole.role.name === RoleEnum.ADMIN) || false;
   }
 
-  async updateRole(updaterUserId: string, userId: string, updateData: UpdateRoleDto): Promise<Role> {
-    const isAdmin = await this.isAdmin(updaterUserId);
+  async updateRole(IdAdmin: string, roleId: string, updateData: UpdateRoleDto): Promise<Role> {
+    console.log('IdAdmin', IdAdmin);
+    console.log('roleId', roleId);
+
+    const isAdmin = await this.isAdmin(IdAdmin);
+    console.log('isAdmin', isAdmin);
     if (!isAdmin) {
       throw new UnauthorizedException('Chỉ Admin mới được cập nhật vai trò');
     }
 
-    const userRole = await this.rolesRepository.findOne({
-      where: { id: userId }, // Changed to use the correct property
-      relations: ['role']
-    });
-
-    if (!userRole) {
-      throw new NotFoundException('Vai trò không tồn tại cho người dùng');
+    const allowedRoles = [RoleEnum.EDITOR, RoleEnum.ADMIN];
+    if (!allowedRoles.includes(updateData.name as RoleEnum)) {
+      throw new BadRequestException('Vai trò mới không hợp lệ. Chỉ có thể là Editor hoặc Admin.');
     }
 
-    const role = userRole; // Assuming userRole is of type Role
-
-    if (role.name === 'ADMIN') {
-      throw new BadRequestException('Không thể thay đổi vai trò Admin');
+    const newRole = await this.rolesRepository.findOne({ where: { id: roleId } });
+    if (!newRole) {
+      throw new NotFoundException('Vai trò không tồn tại');
     }
+    newRole.name = updateData.name as RoleEnum; // Ensure you are updating the name correctly
+    await this.rolesRepository.save(newRole);
 
-    if (updateData.name) {
-      const existingRole = await this.rolesRepository.findOne({
-        where: { name: updateData.name }
-      });
-
-      if (existingRole && existingRole.id !== role.id) {
-        throw new BadRequestException('Tên vai trò đã tồn tại');
-      }
-
-      if (['ADMIN', 'USER'].includes(updateData.name)) {
-        throw new BadRequestException('Tên vai trò không hợp lệ');
-      }
-    }
-
-    if (updateData.name) {
-      role.name = updateData.name;
-    }
-
-    return this.rolesRepository.save(role);
+    return newRole;
   }
-  remove(id: number) {
-    return `This action removes a #${id} role`;
+
+  async remove(IdAdmin: string, id: string) {
+    const isAdmin = await this.isAdmin(IdAdmin);
+    if (!isAdmin) {
+      throw new UnauthorizedException('Chỉ Admin mới được xóa vai trò');
+    }
+    const role = await this.rolesRepository.findOne({ where: { id: id } });
+    if (!role) {
+      throw new NotFoundException('Vai trò không tồn tại');
+    }
+    if (role.name === RoleEnum.ADMIN) {
+      throw new BadRequestException('Không thể xóa vai trò Admin');
+    }
+    return this.rolesRepository.delete(id);
   }
 }

@@ -1,6 +1,6 @@
 // role.enum.ts
 export enum Role {
-  ADMIN = 'ADMIN',
-  EDITOR = 'EDITOR',
-  USER = 'USER'
+  ADMIN = 'Admin',
+  EDITOR = 'Editor',
+  USER = 'User'
 }

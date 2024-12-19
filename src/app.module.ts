@@ -17,7 +17,6 @@ import { UsersModule } from './modules/users/users.module';
 @Module({
   imports: [
     ThrottlerModule.forRoot(throttlerConfig),
-
     DatabaseModule,
     UsersModule,
     AuthModule,

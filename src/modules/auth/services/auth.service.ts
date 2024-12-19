@@ -55,7 +55,7 @@ export class AuthService {
    * @throws UnauthorizedException nếu thông tin đăng nhập không hợp lệ
    */
   async validateUserCredentials(email: string, password: string): Promise<User> {
-    const user = await this.usersService.findUserByEmail(email);
+    const user = await this.usersService.findUserLogin(email);
 
     if (!user || !(await this.bcryptService.compare(password, user.password))) {
       throw new UnauthorizedException('auth.errors.invalid_email_or_password');

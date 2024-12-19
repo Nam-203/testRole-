@@ -44,6 +44,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     const isValidAccessToken = await this.tokenService.verifyAccessToken(token);
+    console.log('isValidAccessToken', isValidAccessToken);
 
     if (!isValidAccessToken) {
       throw new UnauthorizedException('auth.errors.unauthorized');
